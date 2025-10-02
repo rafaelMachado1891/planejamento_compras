@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 import os
 import pyodbc
 from datetime import datetime
+from prophet import Prophet
 
 load_dotenv()
 
@@ -101,5 +102,25 @@ with engine.connect() as connection:
     
     df = pd.DataFrame(result.fetchall(), columns=result.keys()) 
 
+# preparar os dados
+df_prophet = df.rename(columns={"data": "ds", "faturamento": "y"})
 
-print(df)
+# modelo
+m = Prophet(yearly_seasonality=True)
+
+# treino
+m.fit(df_prophet)
+
+# futuro (6 meses à frente, frequência mensal)
+future = m.make_future_dataframe(periods=6, freq='M')
+
+# previsão
+forecast = m.predict(future)
+forecast.to_excel('previsao_vendas.xlsx')
+
+# plot
+fig1 = m.plot(forecast)
+fig1.savefig('fig1')
+
+fig2 = m.plot_components(forecast)
+fig2.savefig('fig2')
